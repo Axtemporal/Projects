@@ -13,9 +13,6 @@ Como funciona:
 Dependências: pip install feedparser python-docx requests deep-translator
 
 Autor: gerado com Claude
-
-#Teste Teste
-
 """
 
 import feedparser
@@ -28,7 +25,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from docx import Document
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-from docx.shared import Pt
 from deep_translator import GoogleTranslator
 
 
@@ -36,6 +32,9 @@ from deep_translator import GoogleTranslator
 # CONFIGURAÇÃO (edite aqui)
 # ============================================================
 
+# Cada região tem seus parâmetros do Google News e sua lista própria de termos.
+# Os parâmetros hl, gl e ceid mudam o idioma da interface, o país e a edição.
+# Para adicionar outra região (ex Reino Unido) basta replicar o bloco.
 REGIOES = {
     "Brasil": {
         "hl": "pt-BR",
@@ -65,10 +64,19 @@ REGIOES = {
     },
 }
 
+# Janela temporal aplicada a todas as buscas. when:1h, when:6h, when:12h, when:1d, when:7d
 JANELA_TEMPORAL = "when:1d"
+
+# Pasta onde o arquivo Word vai ser salvo
 PASTA_SAIDA = os.path.dirname(os.path.abspath(__file__))
+
+# Se True, faz HEAD em cada link pra resolver a URL real do portal
 RESOLVER_LINKS_REAIS = True
+
+# Idioma de destino das traduções
 IDIOMA_DESTINO = "en"
+
+# Número de threads paralelas
 MAX_THREADS = 10
 
 USER_AGENT = (
@@ -82,6 +90,7 @@ USER_AGENT = (
 # ============================================================
 
 def monta_url_rss(termo: str, regiao_cfg: dict) -> str:
+    """Monta URL do RSS de busca usando os parâmetros da região."""
     query_completa = f"{termo} {JANELA_TEMPORAL}".strip()
     query_codificada = urllib.parse.quote(query_completa)
     hl = regiao_cfg["hl"]
@@ -94,6 +103,7 @@ def monta_url_rss(termo: str, regiao_cfg: dict) -> str:
 
 
 def coleta_noticias_termo(termo: str, regiao_cfg: dict) -> list[dict]:
+    """Busca o feed RSS para um termo dentro de uma região."""
     url = monta_url_rss(termo, regiao_cfg)
     feed = feedparser.parse(url, agent=USER_AGENT)
 
@@ -103,13 +113,17 @@ def coleta_noticias_termo(termo: str, regiao_cfg: dict) -> list[dict]:
 
     noticias = []
     for entry in feed.entries:
+        titulo = getattr(entry, "title", "") or ""
+        link = getattr(entry, "link", "") or ""
+        if not titulo:
+            continue
         fonte = ""
         if hasattr(entry, "source") and hasattr(entry.source, "title"):
             fonte = entry.source.title
         noticias.append({
-            "titulo_original": entry.title,
-            "titulo_en": entry.title,
-            "link": entry.link,
+            "titulo_original": titulo,
+            "titulo_en": titulo,
+            "link": link,
             "fonte": fonte,
             "data_raw": getattr(entry, "published", ""),
             "data_formatada": "",
@@ -125,6 +139,16 @@ def resolve_link_real(url_google: str) -> str:
             timeout=10,
             headers={"User-Agent": USER_AGENT},
         )
+        # Alguns servidores recusam HEAD — tenta GET sem baixar o corpo
+        if resposta.status_code == 405:
+            resposta = requests.get(
+                url_google,
+                allow_redirects=True,
+                timeout=10,
+                headers={"User-Agent": USER_AGENT},
+                stream=True,
+            )
+            resposta.close()
         return resposta.url
     except Exception:
         return url_google
@@ -137,6 +161,7 @@ def resolve_links_em_paralelo(noticias: list[dict]) -> list[dict]:
         futuros = {
             executor.submit(resolve_link_real, n["link"]): n
             for n in noticias
+            if n["link"]
         }
         for futuro in as_completed(futuros):
             noticia = futuros[futuro]
@@ -177,6 +202,7 @@ def traduz_em_paralelo(noticias: list[dict]) -> list[dict]:
 
 
 def formata_data_curta(data_raw: str) -> str:
+    """Converte 'Tue, 20 May 2026 10:30:00 GMT' em 'May 20'."""
     if not data_raw:
         return ""
     try:
@@ -223,6 +249,13 @@ def adiciona_hiperlink(paragrafo, url: str, texto: str):
 
 
 def gera_arquivo_word(resultados: dict, caminho_saida: str):
+    """
+    Espera um dict no formato:
+    {
+      "Brasil": { "termo1": [noticias], "termo2": [noticias] },
+      "Estados Unidos": { "termo1": [noticias] },
+    }
+    """
     doc = Document()
 
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -256,7 +289,10 @@ def gera_arquivo_word(resultados: dict, caminho_saida: str):
 
             for noticia in noticias:
                 paragrafo = doc.add_paragraph(style="List Bullet")
-                adiciona_hiperlink(paragrafo, noticia["link"], noticia["titulo_en"])
+                if noticia["link"]:
+                    adiciona_hiperlink(paragrafo, noticia["link"], noticia["titulo_en"])
+                else:
+                    paragrafo.add_run(noticia["titulo_en"])
 
                 partes_sufixo = []
                 if noticia["fonte"]:
