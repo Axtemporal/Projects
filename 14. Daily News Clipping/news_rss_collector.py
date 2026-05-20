@@ -13,6 +13,9 @@ Como funciona:
 Dependências: pip install feedparser python-docx requests deep-translator
 
 Autor: gerado com Claude
+
+#Teste Teste
+
 """
 
 import feedparser
