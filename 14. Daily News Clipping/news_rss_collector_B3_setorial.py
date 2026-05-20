@@ -174,13 +174,17 @@ def coleta_noticias_termo(termo: str) -> list[dict]:
 
     noticias = []
     for entry in feed.entries:
+        titulo = getattr(entry, "title", "") or ""
+        link = getattr(entry, "link", "") or ""
+        if not titulo:
+            continue
         fonte = ""
         if hasattr(entry, "source") and hasattr(entry.source, "title"):
             fonte = entry.source.title
         noticias.append({
-            "titulo_original": entry.title,
-            "titulo_en": entry.title,
-            "link": entry.link,
+            "titulo_original": titulo,
+            "titulo_en": titulo,
+            "link": link,
             "fonte": fonte,
             "data_raw": getattr(entry, "published", ""),
             "data_formatada": "",
@@ -196,6 +200,16 @@ def resolve_link_real(url_google: str) -> str:
             timeout=10,
             headers={"User-Agent": USER_AGENT},
         )
+        # Alguns servidores recusam HEAD — tenta GET sem baixar o corpo
+        if resposta.status_code == 405:
+            resposta = requests.get(
+                url_google,
+                allow_redirects=True,
+                timeout=10,
+                headers={"User-Agent": USER_AGENT},
+                stream=True,
+            )
+            resposta.close()
         return resposta.url
     except Exception:
         return url_google
@@ -208,6 +222,7 @@ def resolve_links_em_paralelo(noticias: list[dict]) -> list[dict]:
         futuros = {
             executor.submit(resolve_link_real, n["link"]): n
             for n in noticias
+            if n["link"]
         }
         for futuro in as_completed(futuros):
             noticia = futuros[futuro]
@@ -327,7 +342,10 @@ def gera_arquivo_word(resultados: dict, caminho_saida: str):
 
             for noticia in noticias:
                 paragrafo = doc.add_paragraph(style="List Bullet")
-                adiciona_hiperlink(paragrafo, noticia["link"], noticia["titulo_en"])
+                if noticia["link"]:
+                    adiciona_hiperlink(paragrafo, noticia["link"], noticia["titulo_en"])
+                else:
+                    paragrafo.add_run(noticia["titulo_en"])
 
                 partes_sufixo = []
                 if noticia["fonte"]:
