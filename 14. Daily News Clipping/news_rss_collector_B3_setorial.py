@@ -23,7 +23,6 @@ Cobertura setorial:
 
 Dependências: pip install feedparser python-docx requests deep-translator
 
-Autor: gerado com Claude
 """
 
 import feedparser  # type: ignore
