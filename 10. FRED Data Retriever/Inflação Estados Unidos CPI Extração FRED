@@ -19,7 +19,7 @@ from datetime import datetime
 # Pega os dados no FRED e retorna
 # FRED api documentation - https://research.stlouisfed.org/docs/api/fred/series.html
 # api_key and series_id cannot be null
-def get_FRED(api_key='b2812b037affbee10b8148d7fe15e552', file_type='json', series_id='', observation_start='', observation_end=''):
+def get_FRED(api_key='XXXX', file_type='json', series_id='', observation_start='', observation_end=''):
     
     # O que faz:
     # ensure series_id is not blank, since it has no default 
