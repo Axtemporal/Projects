@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Arquivos temporarios de Office (locks do Word/PowerPoint)
+~$*
+*.tmp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Rascunhos de relatorio que nao devem ir para o repositorio
+*(revisado).docx
+*(final limpo).docx
+*(final limpo v2).docx
