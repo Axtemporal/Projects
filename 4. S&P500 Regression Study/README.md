@@ -1,72 +1,46 @@
-# S&P 500 Volatility Study — GARCH(1,1)
+# Modelagem de Volatilidade com Modelos ARCH e GARCH: Uma Aplicação ao Índice S&P 500
 
-Conditional volatility estimation for S&P 500 daily returns using ARCH and GARCH models.
+Trabalho da disciplina de Econometria II (IBMEC Rio). O projeto simula um processo ARCH(1) para ilustrar a clusterização de volatilidade e estima um modelo GARCH(1,1) sobre os retornos diários do índice S&P 500, com testes de diagnóstico e previsão.
 
----
+## Visão geral
 
-## The Problem
+A análise está organizada em duas partes. A primeira simula um processo ARCH(1) com parâmetros conhecidos para mostrar, em ambiente controlado, como choques afetam a variância condicional ao longo do tempo. A segunda aplica o modelo GARCH(1,1) a uma série real de retornos do S&P 500 no período de 2015 a 2024, estimando os parâmetros por máxima verossimilhança e avaliando a qualidade do ajuste.
 
-Stock return volatility is not constant — it clusters: volatile periods tend to follow volatile periods, and calm periods tend to follow calm ones. Standard deviation over a fixed window misses this dynamic. GARCH models solve this by estimating a time-varying conditional variance, which is the foundation of modern risk management and options pricing.
+## Dados
 
----
+Preços diários de fechamento do índice S&P 500 entre 2015 e 2024, obtidos via Yahoo Finance (biblioteca `yfinance`), com Stooq e FRED como fontes alternativas caso a principal falhe. São aproximadamente 2.514 observações.
 
-## How It Works
+## Métodos aplicados
 
-### Part 1 — ARCH(1) simulation
-Before applying the model to real data, the code simulates an ARCH(1) process from scratch to illustrate the mechanics:
-- Parameters: α₀ = 0.1, α₁ = 0.8, T = 1,000 periods
-- Shows how shocks propagate into future variance
-- Plots both the simulated return series εₜ and the conditional variance hₜ
+A análise cobre estatísticas descritivas dos retornos, teste de raiz unitária de Dickey-Fuller Aumentado (ADF) no preço e nos retornos, seleção de especificação por AIC e BIC, estimação do GARCH(1,1) por máxima verossimilhança, diagnóstico por ACF dos resíduos e dos resíduos ao quadrado, gráfico Q-Q, teste de Ljung-Box e previsão da volatilidade condicional.
 
-### Part 2 — Real S&P 500 data
-1. Downloads S&P 500 daily prices for 2018 from the FRED API (`SP500` series)
-2. Computes daily logarithmic returns: log(Pₜ / Pₜ₋₁)
-3. Calculates a 20-day rolling historical volatility as a baseline benchmark
+## Principais resultados
 
-### Part 3 — GARCH(1,1) estimation
-1. Fits a GARCH(1,1) model with constant mean to log-returns scaled to percentage points
-2. Extracts the conditional volatility series estimated by the model
-3. Plots GARCH-estimated volatility against the 20-day rolling baseline
+O retorno é estacionário (ADF com p-valor inferior a 0,001) enquanto o preço possui raiz unitária. O GARCH(1,1) foi a especificação de menor BIC. Os parâmetros estimados foram ômega = 0,0397, alfa = 0,1837 e beta = 0,7853, com persistência (alfa mais beta) de 0,969, indicando alta persistência da volatilidade. O teste de Ljung-Box nos resíduos ao quadrado (p-valor 0,7478) não rejeita a ausência de autocorrelação, indicando bom ajuste.
 
-### Part 4 — Diagnostic tests
-| Test | Purpose |
-|------|---------|
-| Standardized residuals plot | Check for remaining structure in residuals |
-| ACF of residuals | Test for autocorrelation in standardized residuals |
-| ACF of residuals² | Test for remaining ARCH effects |
-| Q-Q plot | Check normality assumption of residuals |
-| Ljung-Box test (lag 10) | Formal test for autocorrelation in squared residuals |
+## Como executar
 
----
+Opção recomendada, no Google Colab: abra o notebook `Econometria_II_SP500_GARCH_Colab.ipynb` e execute todas as células (a internet do Colab já vem liberada).
 
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| ARCH(1) simulation | εₜ series and conditional variance hₜ |
-| S&P 500 log returns | Daily return chart for 2018 |
-| Rolling volatility | 20-day historical volatility baseline |
-| GARCH vs. historical | Conditional volatility comparison chart |
-| Residual diagnostics | ACF, ACF², Q-Q plot, standardized residuals |
-| Model summary | GARCH(1,1) parameter estimates and Ljung-Box test |
-
----
-
-## Technologies
-
-| Package | Use |
-|---------|-----|
-| `arch` | GARCH(1,1) model estimation |
-| `statsmodels` | ACF plots, Q-Q analysis, Ljung-Box test |
-| `pandas_datareader` | S&P 500 price data from FRED API |
-| `NumPy` / `pandas` | Log return and variance calculations |
-| `Matplotlib` | All charts |
-
----
-
-## How to Run
+Localmente, com Python 3.10 ou superior:
 
 ```bash
-pip install arch pandas_datareader statsmodels numpy pandas matplotlib
-python sp500_garch_model.py
+pip install -r requirements.txt
+python "Econometria_II_SP500_GARCH.py"
 ```
+
+## Estrutura do repositório
+
+```
+.
+├── README.md
+├── requirements.txt
+├── Econometria_II_SP500_GARCH.py          # script principal
+├── Econometria_II_SP500_GARCH_Colab.ipynb # notebook comentado por seção
+├── relatorio/                             # relatório final em PDF
+└── figuras/                               # gráficos gerados
+```
+
+## Autor
+
+Alex Temporal. Econometria II, IBMEC Rio.
